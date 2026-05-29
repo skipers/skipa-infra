@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: skipa-backend
+  namespace: skala3-finalproj-class2-team8
+spec:
+  type: ClusterIP
+  selector:
+    app: skipa-backend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
