@@ -1,0 +1,22 @@
+# 환경변수
+.env
+.env.*
+
+# 시크릿 파일
+*.secret
+secrets/
+*-secret.yml
+*-secret.yaml
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 임시 파일
+*.tmp
+*.bak
