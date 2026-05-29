@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: team8-skipa-datastore
   namespace: skala-argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   project: default
   source:
@@ -14,7 +16,7 @@ spec:
     namespace: skala3-finalproj-class2-team8
   syncPolicy:
     automated:
-      prune: true
+      prune: false
       selfHeal: true
     syncOptions:
       - CreateNamespace=false

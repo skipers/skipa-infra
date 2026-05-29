@@ -1,7 +1,9 @@
 # skipa-infra
 
-이 레포지토리는 SKIPA 서비스의 Kubernetes manifest 및 Argo CD 설정을 관리합니다.  
-CI는 각 서비스 레포의 GitHub Actions가 담당하고, CD는 이 레포를 기반으로 Argo CD가 담당합니다.
+이 레포지토리는 SKIPA 서비스의 Kubernetes manifest 및 Argo CD 설정을 관리합니다.
+
+CI는 각 서비스 레포의 GitHub Actions가 담당하고, CD는 이 레포를 기준으로 Argo CD가 담당합니다.
+서비스 배포 시 각 서비스 레포의 GitHub Actions는 Docker image를 빌드해 Harbor에 push한 뒤, 이 레포의 해당 서비스 `kustomization.yml`에 image tag를 반영합니다.
 
 ## 디렉토리 구조
 
@@ -11,25 +13,29 @@ skipa-infra/
 │   ├── root/
 │   │   └── skipa-root-application.yml
 │   └── apps/
+│       ├── datastore-application.yml
 │       ├── backend-application.yml
 │       ├── frontend-application.yml
-│       ├── ai-application.yml
-│       └── datastore-application.yml
+│       └── ai-application.yml
 └── k8s/
+    ├── datastore/
+    │   ├── kustomization.yml
+    │   ├── postgres-service.yml
+    │   ├── postgres-statefulset.yml
+    │   ├── redis-service.yml
+    │   └── redis-statefulset.yml
     ├── backend/
+    │   ├── kustomization.yml
     │   ├── deployment.yml
     │   └── service.yml
     ├── frontend/
+    │   ├── kustomization.yml
     │   ├── deployment.yml
     │   └── service.yml
-    ├── ai/
-    │   ├── deployment.yml
-    │   └── service.yml
-    └── datastore/
-        ├── postgres-service.yml
-        ├── postgres-statefulset.yml
-        ├── redis-service.yml
-        └── redis-statefulset.yml
+    └── ai/
+        ├── kustomization.yml
+        ├── deployment.yml
+        └── service.yml
 ```
 
 ## Namespace
@@ -46,6 +52,40 @@ Argo CD Application은 공용 Argo CD namespace에 생성합니다.
 skala-argocd
 ```
 
+## 배포 구조
+
+SKIPA는 Argo CD App of Apps 구조를 사용합니다.
+
+```text
+team8-skipa (root Application)
+├── team8-skipa-datastore  # PostgreSQL / Redis
+├── team8-skipa-backend    # Spring Boot backend
+├── team8-skipa-ai         # FastAPI AI server
+└── team8-skipa-frontend   # frontend
+```
+
+root Application은 `argocd/apps/` 디렉토리를 바라보고, 하위 Application들을 생성 및 관리합니다.
+각 하위 Application은 자기 서비스의 `k8s/{service}` 디렉토리를 바라봅니다.
+
+```text
+team8-skipa-datastore  → k8s/datastore
+team8-skipa-backend    → k8s/backend
+team8-skipa-ai         → k8s/ai
+team8-skipa-frontend   → k8s/frontend
+```
+
+## Sync 순서
+
+하위 Application에는 sync wave를 지정합니다.
+
+```text
+wave 0: datastore
+wave 1: backend, ai
+wave 2: frontend
+```
+
+Datastore가 먼저 생성되고, 이후 backend/AI 서버와 frontend가 동기화되는 흐름입니다.
+
 ## 리소스 구성
 
 ### Backend
@@ -56,7 +96,7 @@ skala-argocd
 - Image Registry: Harbor
 - Image: `amdp-registry.skala-ai.com/skala3-finalproj-class2-team8/skipa-backend:<tag>`
 
-Service는 `ClusterIP` 타입으로 생성합니다.  
+Service는 `ClusterIP` 타입으로 생성합니다.
 외부에 직접 공개하지 않고, 클러스터 내부에서 접근하거나 로컬 확인 시 `port-forward`를 사용합니다.
 
 ```bash
@@ -73,6 +113,7 @@ http://127.0.0.1:18080
 
 - Deployment: `skipa-frontend`
 - Service: `skipa-frontend`
+- Port: `3000`
 - Image Registry: Harbor
 - Image: `amdp-registry.skala-ai.com/skala3-finalproj-class2-team8/skipa-frontend:<tag>`
 
@@ -80,6 +121,7 @@ http://127.0.0.1:18080
 
 - Deployment: `skipa-ai`
 - Service: `skipa-ai`
+- Port: `8000`
 - Image Registry: Harbor
 - Image: `amdp-registry.skala-ai.com/skala3-finalproj-class2-team8/skipa-ai:<tag>`
 
@@ -119,7 +161,7 @@ skipa-redis:6379
 
 ### Service
 
-Kubernetes에서 Pod는 재시작되면 IP가 바뀔 수 있습니다.  
+Kubernetes에서 Pod는 재시작되면 IP가 바뀔 수 있습니다.
 Service는 Pod 앞에 고정된 내부 접속 주소를 제공합니다.
 
 백엔드는 PostgreSQL/Redis Pod의 IP를 직접 바라보지 않고, 아래 Service 주소로 접근합니다.
@@ -131,12 +173,12 @@ Redis: skipa-redis:6379
 
 ### Headless Service
 
-StatefulSet이 각 Pod를 안정적으로 식별하기 위해 사용하는 Service입니다.  
+StatefulSet이 각 Pod를 안정적으로 식별하기 위해 사용하는 Service입니다.
 일반적인 백엔드 접속용 주소로는 `skipa-postgres`, `skipa-redis` Service를 사용합니다.
 
 ### StatefulSet
 
-PostgreSQL, Redis처럼 데이터를 저장하는 애플리케이션은 Pod가 재시작되어도 같은 저장소를 다시 사용해야 합니다.  
+PostgreSQL, Redis처럼 데이터를 저장하는 애플리케이션은 Pod가 재시작되어도 같은 저장소를 다시 사용해야 합니다.
 StatefulSet은 고정된 Pod 이름과 PVC를 기반으로 상태가 있는 애플리케이션을 안정적으로 실행합니다.
 
 예시:
@@ -148,12 +190,12 @@ skipa-redis-0
 
 ### Deployment
 
-백엔드, 프론트엔드, AI 서버처럼 상태를 직접 저장하지 않는 애플리케이션 서버는 Deployment로 실행합니다.  
+백엔드, 프론트엔드, AI 서버처럼 상태를 직접 저장하지 않는 애플리케이션 서버는 Deployment로 실행합니다.
 Deployment는 새 이미지 배포 시 RollingUpdate를 통해 기존 Pod를 유지하면서 새 Pod로 교체할 수 있습니다.
 
 ## Secret 생성
 
-실제 비밀번호, 토큰, 인증 정보는 GitHub에 커밋하지 않습니다.  
+실제 비밀번호, 토큰, 인증 정보는 GitHub에 커밋하지 않습니다.
 아래 Secret들은 클러스터에 직접 생성해야 합니다.
 
 ### PostgreSQL Secret
@@ -212,24 +254,10 @@ skipa-postgres-secret
 skipa-redis-secret
 ```
 
-## Argo CD 설정
+## Argo CD 적용
 
-### App of Apps 구조
-
-root Application이 `argocd/apps/` 디렉토리를 바라보며, 하위 Application들을 자동으로 생성 및 관리합니다.
-
-```text
-team8-skipa (root)
-├── team8-skipa-backend
-├── team8-skipa-frontend
-├── team8-skipa-ai
-└── team8-skipa-datastore
-```
-
-### root Application 생성
-
-root Application 하나만 수동으로 적용합니다.  
-이후 `argocd/apps/` 디렉토리의 변경은 Argo CD가 자동으로 감지합니다.
+root Application 하나만 수동으로 적용합니다.
+이후 `argocd/apps/` 디렉토리의 child Application들은 Argo CD가 자동으로 생성 및 관리합니다.
 
 ```bash
 kubectl apply -f argocd/root/skipa-root-application.yml
@@ -242,19 +270,28 @@ kubectl get application -n skala-argocd
 kubectl describe application team8-skipa -n skala-argocd
 ```
 
-## Datastore 수동 적용
+## Datastore 관리 방식
 
-Datastore는 초기 세팅 시 수동으로 적용합니다.
+Datastore도 Argo CD로 관리합니다.
+다만 PostgreSQL/Redis는 상태를 가진 리소스이므로, 서비스 배포 자동화 대상과 분리합니다.
 
-```bash
-kubectl apply -f k8s/datastore/postgres-service.yml
-kubectl apply -f k8s/datastore/postgres-statefulset.yml
+즉, `team8-skipa-datastore` Application은 `k8s/datastore`를 기준으로 PostgreSQL/Redis 리소스를 관리하지만, frontend/backend/ai 레포의 GitHub Actions는 `k8s/datastore`를 수정하지 않습니다.
 
-kubectl apply -f k8s/datastore/redis-service.yml
-kubectl apply -f k8s/datastore/redis-statefulset.yml
+```text
+Argo CD 관리 대상: PostgreSQL / Redis / Service / StatefulSet / PVC
+GitHub Actions 자동 태그 변경 대상: 제외
 ```
 
-상태 확인:
+Datastore Application은 self-heal은 활성화하지만, prune은 비활성화합니다.
+
+```yaml
+syncPolicy:
+  automated:
+    prune: false
+    selfHeal: true
+```
+
+Datastore 상태 확인:
 
 ```bash
 kubectl get pods
@@ -276,11 +313,108 @@ postgres-data-skipa-postgres-0   Bound   2Gi
 redis-data-skipa-redis-0         Bound   1Gi
 ```
 
+## Flyway 마이그레이션
+
+DB schema migration은 backend 애플리케이션의 Flyway가 담당합니다.
+
+```text
+team8-skipa-datastore
+→ PostgreSQL / Redis 실행
+
+team8-skipa-backend
+→ Spring Boot 실행
+→ DB 연결
+→ Flyway migration 실행
+→ 애플리케이션 실행
+```
+
+따라서 Datastore를 Argo CD로 관리하더라도 Flyway 구조는 그대로 유지할 수 있습니다.
+
+Spring Boot 설정 예시:
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+```
+
+## Kustomize 사용 방식
+
+각 서비스 디렉토리는 `kustomization.yml`을 포함합니다.
+Argo CD child Application은 각 `k8s/{service}` 디렉토리를 바라보고, 해당 디렉토리의 Kustomize 설정을 기준으로 리소스를 동기화합니다.
+
+예시:
+
+```text
+k8s/backend/
+├── kustomization.yml
+├── deployment.yml
+└── service.yml
+```
+
+`deployment.yml`에는 기본 image가 들어 있고, 실제 배포 시에는 `kustomization.yml`의 `images.newTag`를 GitHub Actions가 변경합니다.
+
+예시:
+
+```yaml
+images:
+  - name: amdp-registry.skala-ai.com/skala3-finalproj-class2-team8/skipa-backend
+    newTag: dev-a1b2c3d
+```
+
+이 방식으로 image tag 변경을 `deployment.yml`이 아니라 `kustomization.yml`에 집중시킵니다.
+
+## 이미지 태그 전략
+
+`dev-latest`만 사용하면 Git manifest가 바뀌지 않아 Argo CD가 변경을 감지하지 못할 수 있습니다.
+따라서 각 서비스는 고유 태그를 사용합니다.
+
+```text
+skipa-backend:dev-<short-sha>
+skipa-frontend:dev-<short-sha>
+skipa-ai:dev-<short-sha>
+```
+
+예시:
+
+```text
+skipa-backend:dev-a1b2c3d
+```
+
+서비스 레포의 GitHub Actions는 다음 두 태그를 함께 push할 수 있습니다.
+
+```text
+dev-<short-sha>  # 실제 배포에 사용
+dev-latest       # 참고용 또는 수동 확인용
+```
+
+실제 Argo CD 배포 기준은 `kustomization.yml`에 기록된 `dev-<short-sha>` 태그입니다.
+
 ## 배포 흐름
 
-각 서비스 레포에서 main 브랜치에 merge되면 GitHub Actions가 실행됩니다.  
-GitHub Actions는 이미지를 빌드하고 Harbor에 push한 뒤, 이 레포의 해당 `deployment.yml` image tag를 업데이트합니다.  
+각 서비스 레포에서 main 브랜치에 merge되면 GitHub Actions가 실행됩니다.
+GitHub Actions는 이미지를 빌드하고 Harbor에 push한 뒤, 이 레포의 해당 서비스 `kustomization.yml` image tag를 업데이트합니다.
 Argo CD는 이 레포의 변경을 감지하여 EKS 클러스터에 자동으로 sync합니다.
+
+Backend 예시:
 
 ```text
 skipa-backend main merge
@@ -288,10 +422,18 @@ skipa-backend main merge
 → Spring Boot jar 빌드
 → Docker image 빌드
 → Harbor push
-→ skipa-infra/k8s/backend/deployment.yml image tag 수정 후 commit
+→ skipa-infra/k8s/backend/kustomization.yml newTag 수정 후 commit
 → Argo CD가 skipa-infra 변경 감지
-→ EKS에 자동 sync
-→ RollingUpdate로 백엔드 Pod 교체
+→ team8-skipa-backend Application sync
+→ RollingUpdate로 backend Pod 교체
+```
+
+Frontend, AI도 동일한 방식으로 각각 자기 디렉토리의 `kustomization.yml`만 수정합니다.
+
+```text
+skipa-frontend → k8s/frontend/kustomization.yml
+skipa-backend  → k8s/backend/kustomization.yml
+skipa-ai       → k8s/ai/kustomization.yml
 ```
 
 ## GitHub Secrets
@@ -334,35 +476,9 @@ REDIS_PASSWORD=<Redis Secret password>
 JWT_SECRET=<Backend JWT Secret>
 ```
 
-Spring Boot 설정 예시:
-
-```yaml
-spring:
-  datasource:
-    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-    driver-class-name: org.postgresql.Driver
-
-  data:
-    redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
-      password: ${REDIS_PASSWORD}
-
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
-    baseline-on-migrate: false
-
-  jpa:
-    hibernate:
-      ddl-auto: validate
-```
-
 ## 로컬에서 DB 확인
 
-PostgreSQL은 외부에 직접 공개하지 않습니다.  
+PostgreSQL은 외부에 직접 공개하지 않습니다.
 DataGrip 등 로컬 클라이언트에서 확인할 때는 `port-forward`를 사용합니다.
 
 ```bash
@@ -397,4 +513,5 @@ redis-cli -h 127.0.0.1 -p 16379 -a '<REDIS_PASSWORD>' PING
 - PostgreSQL/Redis는 외부에 직접 공개하지 않고 `ClusterIP`로 유지합니다.
 - PVC를 삭제하면 연결된 실제 볼륨 데이터도 삭제될 수 있으므로 주의합니다.
 - `gp3` StorageClass의 ReclaimPolicy가 `Delete`이므로 PVC 삭제 시 데이터가 함께 삭제될 수 있습니다.
-- Datastore 리소스는 서비스 배포와 분리해서 관리합니다.
+- Datastore는 Argo CD로 관리하지만, 서비스 배포 자동화 대상에서는 제외합니다.
+- frontend/backend/ai 배포 시에는 각 서비스의 `kustomization.yml` image tag만 변경합니다.
