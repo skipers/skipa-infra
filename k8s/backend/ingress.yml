@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: skipa-backend-ingress
+spec:
+  ingressClassName: public-nginx
+  rules:
+    - host: api-team8-skipa.skala25a.project.skala-ai.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: skipa-backend
+                port:
+                  number: 8080
