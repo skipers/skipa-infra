@@ -2,8 +2,16 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: skipa-backend-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
   ingressClassName: public-nginx
+  tls:
+    - hosts:
+        - api-team8-skipa.skala25a.project.skala-ai.com
+      secretName: skipa-backend-tls
   rules:
     - host: api-team8-skipa.skala25a.project.skala-ai.com
       http:
