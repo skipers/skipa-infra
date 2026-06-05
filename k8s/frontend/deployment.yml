@@ -25,16 +25,16 @@ spec:
           image: amdp-registry.skala-ai.com/skala26a-ai2/skipa-frontend:dev-latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 3000
+            - containerPort: 80
               name: http
           readinessProbe:
             tcpSocket:
-              port: 3000
+              port: 80
             initialDelaySeconds: 20
             periodSeconds: 10
           livenessProbe:
             tcpSocket:
-              port: 3000
+              port: 80
             initialDelaySeconds: 40
             periodSeconds: 20
           resources:

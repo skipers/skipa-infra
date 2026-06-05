@@ -4,7 +4,9 @@ kind: Kustomization
 resources:
   - deployment.yml
   - service.yml
+  - ingress.yml
 
 images:
   - name: amdp-registry.skala-ai.com/skala26a-ai2/skipa-frontend
+    newName: amdp-registry.skala-ai.com/skala26a-ai2/skipa-frontend
     newTag: dev-latest
