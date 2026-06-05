@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: skipa-ai-config
+  namespace: skala3-finalproj-class2-team8
+data:
+  DATA_ROOT: "/app/chatbot/data"
+  PATENTS_ROOT: "/app/chatbot/data/mapped_patent_reports"
+  PUBLIC_FILE_BASE_URL: "https://ai-team8-skipa.skala25a.project.skala-ai.com/files"
+
+  INTENT_PROVIDER: "openai"
+  ANSWER_PROVIDER: "openai"
+  EMBEDDING_PROVIDER: "openai"
+
+  OPENAI_INTENT_MODEL: "gpt-4.1-mini"
+  OPENAI_ANSWER_MODEL: "gpt-4.1"
+  OPENAI_VLM_MODEL: "gpt-4.1-mini"
+  OPENAI_EMBEDDING_MODEL: "text-embedding-3-large"
+  EMBEDDING_MODEL: "text-embedding-3-large"
+
+  OLLAMA_BASE_URL: "http://localhost:11434"
+  GEN_MODEL: "qwen2.5:1.5b"
+  ANSWER_MODEL: "gpt-4.1"
+  OLLAMA_TEMPERATURE: "0.0"
+  ENABLE_OLLAMA_INTENT_FALLBACK: "false"
+
+  TOP_K: "10"
+  TOP_K_CANDIDATES: "80"
+  MIN_LOCAL_CONFIDENCE: "0.18"
+
+  CHUNK_MAX_CHARS: "1200"
+  CHUNK_OVERLAP: "150"
+  MAX_DOC_CHARS: "1600"
+  MAX_TOTAL_CONTEXT_CHARS: "4200"
+
+  ENABLE_STRUCTURED_FAST_PATH: "false"
+  ANSWER_GENERATION_MODE: "llm"
+  DYNAMIC_ANSWER_ENABLED: "true"
+  DYNAMIC_ANSWER_TIMEOUT: "180"
+  INTENT_NUM_PREDICT: "180"
+  ANSWER_NUM_PREDICT: "420"
+  DYNAMIC_MAX_CONTEXT_CHARS: "3600"
+  DYNAMIC_ANSWER_MODES: "comparison"
+
+  ENABLE_WEB_SEARCH: "true"
+  WEB_SEARCH_API_URL: ""
+  WEB_SEARCH_LIMIT: "5"
+  WEB_SEARCH_TIMEOUT: "20"
+  ENABLE_WEB_SEARCH_FALLBACK: "true"
+  WEB_SEARCH_BLOCKLIST_DOMAINS: "namu.wiki,blog.naver.com,m.blog.naver.com,tistory.com,wikipedia.org,ko.wikipedia.org"
+
+  TAVILY_API_URL: "https://api.tavily.com/search"
+  TAVILY_SEARCH_DEPTH: "advanced"
+  TAVILY_TOPIC: "general"
+
+  RETURN_PERFORMANCE: "true"
+  RAG_QUERY_LOG_PATH: "./logs/rag_query_log.jsonl"
+
+  MINIO_ENDPOINT: "http://skipa-minio:9000"
+  MINIO_BUCKET: "skipa"
+  MINIO_SECURE: "false"
