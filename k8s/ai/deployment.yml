@@ -28,13 +28,13 @@ spec:
             - containerPort: 8000
               name: http
 
+          envFrom:
+            - configMapRef:
+                name: skipa-ai-config
+            - secretRef:
+                name: skipa-ai-secret
+
           env:
-            - name: MINIO_ENDPOINT
-              value: "http://skipa-minio:9000"
-
-            - name: MINIO_BUCKET
-              value: "skipa"
-
             - name: MINIO_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
@@ -46,9 +46,6 @@ spec:
                 secretKeyRef:
                   name: skipa-minio-secret
                   key: root-password
-
-            - name: MINIO_SECURE
-              value: "false"
 
           readinessProbe:
             tcpSocket:
