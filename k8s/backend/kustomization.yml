@@ -8,4 +8,4 @@ resources:
 images:
 - name: amdp-registry.skala-ai.com/skala26a-ai2/skipa-backend
   newName: amdp-registry.skala-ai.com/skala26a-ai2/skipa-backend
-  newTag: dev-b5bdce0
+  newTag: dev-5e67f68
