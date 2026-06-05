@@ -6,5 +6,5 @@ resources:
   - service.yml
 
 images:
-  - name: amdp-registry.skala-ai.com/skala3-finalproj-class2-team8/skipa-frontend
+  - name: amdp-registry.skala-ai.com/skala26a-ai2/skipa-frontend
     newTag: dev-latest

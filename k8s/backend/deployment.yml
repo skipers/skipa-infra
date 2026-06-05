@@ -22,7 +22,7 @@ spec:
         - name: harbor-registry-secret
       containers:
         - name: skipa-backend
-          image: amdp-registry.skala-ai.com/skala3-finalproj-class2-team8/skipa-backend:dev-latest
+          image: amdp-registry.skala-ai.com/skala26a-ai2/skipa-backend:dev-latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
