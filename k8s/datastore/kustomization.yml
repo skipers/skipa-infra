@@ -6,3 +6,5 @@ resources:
   - postgres-statefulset.yml
   - redis-service.yml
   - redis-statefulset.yml
+  - minio-service.yml
+  - minio-statefulset.yml
