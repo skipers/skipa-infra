@@ -19,10 +19,10 @@ spec:
           image: rabbitmq:3.13-management-alpine
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 5672
-              name: amqp
-            - containerPort: 15672
-              name: management
+            - name: amqp
+              containerPort: 5672
+            - name: management
+              containerPort: 15672
           env:
             - name: RABBITMQ_DEFAULT_USER
               valueFrom:
@@ -40,24 +40,40 @@ spec:
           resources:
             requests:
               cpu: 100m
-              memory: 256Mi
-            limits:
-              cpu: 500m
               memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          startupProbe:
+            exec:
+              command:
+                - rabbitmq-diagnostics
+                - -q
+                - ping
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 12
           readinessProbe:
             exec:
               command:
                 - rabbitmq-diagnostics
+                - -q
                 - ping
             initialDelaySeconds: 20
             periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 6
           livenessProbe:
             exec:
               command:
                 - rabbitmq-diagnostics
+                - -q
                 - ping
-            initialDelaySeconds: 60
-            periodSeconds: 20
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
   volumeClaimTemplates:
     - metadata:
         name: rabbitmq-data
