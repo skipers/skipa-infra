@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: skipa-backend-config
+  namespace: skala3-finalproj-class2-team8
+data:
+  SPRING_PROFILES_ACTIVE: "prod"
+  LOCAL_SEED_PASSWORD: "1234"
+
+  DB_HOST: "skipa-postgres"
+  DB_PORT: "5432"
+
+  REDIS_HOST: "skipa-redis"
+  REDIS_PORT: "6379"
+
+  RABBITMQ_HOST: "skipa-rabbitmq"
+  RABBITMQ_PORT: "5672"
+
+  REPORT_EXCHANGE: "skipa.report.exchange"
+  REPORT_GENERATE_QUEUE: "skipa.report.generate"
+  REPORT_GENERATE_ROUTING_KEY: "report.generate"
+
+  MINIO_ENDPOINT: "http://skipa-minio:9000"
+  MINIO_REPORT_BUCKET: "skipa-reports"
+  MINIO_REGION: "us-east-1"
+  MINIO_PRESIGNED_URL_EXPIRY_SECONDS: "600"

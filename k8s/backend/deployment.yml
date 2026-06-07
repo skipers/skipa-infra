@@ -27,45 +27,71 @@ spec:
           ports:
             - containerPort: 8080
               name: http
-          env:
-            - name: SPRING_PROFILES_ACTIVE
-              value: prod
 
+          envFrom:
+            - configMapRef:
+                name: skipa-backend-config
+
+          env:
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: skipa-backend-secret
                   key: JWT_SECRET
 
-            - name: DB_HOST
-              value: skipa-postgres
-            - name: DB_PORT
-              value: "5432"
+            - name: INTERNAL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: skipa-backend-secret
+                  key: INTERNAL_API_KEY
+
             - name: DB_NAME
               valueFrom:
                 secretKeyRef:
                   name: skipa-postgres-secret
                   key: database
+
             - name: DB_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: skipa-postgres-secret
                   key: username
+
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: skipa-postgres-secret
                   key: password
 
-            - name: REDIS_HOST
-              value: skipa-redis
-            - name: REDIS_PORT
-              value: "6379"
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: skipa-redis-secret
                   key: password
+
+            - name: RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: skipa-rabbitmq-secret
+                  key: username
+
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: skipa-rabbitmq-secret
+                  key: password
+
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: skipa-minio-secret
+                  key: root-user
+
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: skipa-minio-secret
+                  key: root-password
 
           readinessProbe:
             tcpSocket:
