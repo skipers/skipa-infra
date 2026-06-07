@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: team8-skipa-queue
+  namespace: skala-argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/skipers/skipa-infra.git
+    targetRevision: main
+    path: k8s/queue
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: skala3-finalproj-class2-team8
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false

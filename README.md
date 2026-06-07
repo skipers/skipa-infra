@@ -14,6 +14,7 @@ skipa-infra/
 │   │   └── skipa-root-application.yml
 │   └── apps/
 │       ├── datastore-application.yml
+│       ├── queue-application.yml
 │       ├── backend-application.yml
 │       ├── frontend-application.yml
 │       └── ai-application.yml
@@ -23,7 +24,13 @@ skipa-infra/
     │   ├── postgres-service.yml
     │   ├── postgres-statefulset.yml
     │   ├── redis-service.yml
-    │   └── redis-statefulset.yml
+    │   ├── redis-statefulset.yml
+    │   ├── minio-service.yml
+    │   └── minio-statefulset.yml
+    ├── queue/
+    │   ├── kustomization.yml
+    │   ├── rabbitmq-service.yml
+    │   └── rabbitmq-statefulset.yml
     ├── backend/
     │   ├── kustomization.yml
     │   ├── deployment.yml
@@ -58,7 +65,8 @@ SKIPA는 Argo CD App of Apps 구조를 사용합니다.
 
 ```text
 team8-skipa (root Application)
-├── team8-skipa-datastore  # PostgreSQL / Redis
+├── team8-skipa-datastore  # PostgreSQL / Redis / MinIO
+├── team8-skipa-queue      # RabbitMQ
 ├── team8-skipa-backend    # Spring Boot backend
 ├── team8-skipa-ai         # FastAPI AI server
 └── team8-skipa-frontend   # frontend
@@ -69,6 +77,7 @@ root Application은 `argocd/apps/` 디렉토리를 바라보고, 하위 Applicat
 
 ```text
 team8-skipa-datastore  → k8s/datastore
+team8-skipa-queue      → k8s/queue
 team8-skipa-backend    → k8s/backend
 team8-skipa-ai         → k8s/ai
 team8-skipa-frontend   → k8s/frontend
@@ -79,12 +88,12 @@ team8-skipa-frontend   → k8s/frontend
 하위 Application에는 sync wave를 지정합니다.
 
 ```text
-wave 0: datastore
+wave 0: datastore, queue
 wave 1: backend, ai
 wave 2: frontend
 ```
 
-Datastore가 먼저 생성되고, 이후 backend/AI 서버와 frontend가 동기화되는 흐름입니다.
+Datastore와 Queue가 먼저 생성되고, 이후 backend/AI 서버와 frontend가 동기화되는 흐름입니다.
 
 ## 리소스 구성
 
@@ -157,6 +166,40 @@ skipa-postgres:5432
 skipa-redis:6379
 ```
 
+### MinIO
+
+- Service: `skipa-minio`
+- Headless Service: `skipa-minio-headless`
+- StatefulSet: `skipa-minio`
+- Secret: `skipa-minio-secret`
+- API Port: `9000`
+- Console Port: `9001`
+- StorageClass: `gp3`
+- Storage: `2Gi`
+
+클러스터 내부 접속 주소:
+
+```text
+skipa-minio:9000
+```
+
+### RabbitMQ
+
+- Service: `skipa-rabbitmq`
+- Headless Service: `skipa-rabbitmq-headless`
+- StatefulSet: `skipa-rabbitmq`
+- Secret: `skipa-rabbitmq-secret`
+- AMQP Port: `5672`
+- Management Port: `15672`
+- StorageClass: `gp3`
+- Storage: `1Gi`
+
+백엔드/AI Worker 내부 접속 주소:
+
+```text
+skipa-rabbitmq:5672
+```
+
 ## Kubernetes 리소스 역할
 
 ### Service
@@ -164,21 +207,23 @@ skipa-redis:6379
 Kubernetes에서 Pod는 재시작되면 IP가 바뀔 수 있습니다.
 Service는 Pod 앞에 고정된 내부 접속 주소를 제공합니다.
 
-백엔드는 PostgreSQL/Redis Pod의 IP를 직접 바라보지 않고, 아래 Service 주소로 접근합니다.
+백엔드와 AI Worker는 Pod의 IP를 직접 바라보지 않고, 아래 Service 주소로 접근합니다.
 
 ```text
 PostgreSQL: skipa-postgres:5432
 Redis: skipa-redis:6379
+MinIO: skipa-minio:9000
+RabbitMQ: skipa-rabbitmq:5672
 ```
 
 ### Headless Service
 
 StatefulSet이 각 Pod를 안정적으로 식별하기 위해 사용하는 Service입니다.
-일반적인 백엔드 접속용 주소로는 `skipa-postgres`, `skipa-redis` Service를 사용합니다.
+일반적인 애플리케이션 접속용 주소로는 `skipa-postgres`, `skipa-redis`, `skipa-minio`, `skipa-rabbitmq` Service를 사용합니다.
 
 ### StatefulSet
 
-PostgreSQL, Redis처럼 데이터를 저장하는 애플리케이션은 Pod가 재시작되어도 같은 저장소를 다시 사용해야 합니다.
+PostgreSQL, Redis, MinIO, RabbitMQ처럼 상태를 가진 애플리케이션은 Pod가 재시작되어도 같은 저장소를 다시 사용해야 합니다.
 StatefulSet은 고정된 Pod 이름과 PVC를 기반으로 상태가 있는 애플리케이션을 안정적으로 실행합니다.
 
 예시:
@@ -186,6 +231,8 @@ StatefulSet은 고정된 Pod 이름과 PVC를 기반으로 상태가 있는 애�
 ```text
 skipa-postgres-0
 skipa-redis-0
+skipa-minio-0
+skipa-rabbitmq-0
 ```
 
 ### Deployment
@@ -216,6 +263,26 @@ REDIS_PASSWORD=$(openssl rand -hex 24)
 
 kubectl create secret generic skipa-redis-secret \
   --from-literal=password="$REDIS_PASSWORD"
+```
+
+### MinIO Secret
+
+```bash
+MINIO_ROOT_PASSWORD=$(openssl rand -hex 24)
+
+kubectl create secret generic skipa-minio-secret \
+  --from-literal=root-user="skipa" \
+  --from-literal=root-password="$MINIO_ROOT_PASSWORD"
+```
+
+### RabbitMQ Secret
+
+```bash
+RABBITMQ_PASSWORD=$(openssl rand -hex 24)
+
+kubectl create secret generic skipa-rabbitmq-secret \
+  --from-literal=username="skipa" \
+  --from-literal=password="$RABBITMQ_PASSWORD"
 ```
 
 ### Backend JWT Secret
@@ -252,6 +319,8 @@ harbor-registry-secret
 skipa-backend-secret
 skipa-postgres-secret
 skipa-redis-secret
+skipa-minio-secret
+skipa-rabbitmq-secret
 ```
 
 ## Argo CD 적용
@@ -273,12 +342,12 @@ kubectl describe application team8-skipa -n skala-argocd
 ## Datastore 관리 방식
 
 Datastore도 Argo CD로 관리합니다.
-다만 PostgreSQL/Redis는 상태를 가진 리소스이므로, 서비스 배포 자동화 대상과 분리합니다.
+다만 PostgreSQL/Redis/MinIO는 상태를 가진 리소스이므로, 서비스 배포 자동화 대상과 분리합니다.
 
-즉, `team8-skipa-datastore` Application은 `k8s/datastore`를 기준으로 PostgreSQL/Redis 리소스를 관리하지만, frontend/backend/ai 레포의 GitHub Actions는 `k8s/datastore`를 수정하지 않습니다.
+즉, `team8-skipa-datastore` Application은 `k8s/datastore`를 기준으로 PostgreSQL/Redis/MinIO 리소스를 관리하지만, frontend/backend/ai 레포의 GitHub Actions는 `k8s/datastore`를 수정하지 않습니다.
 
 ```text
-Argo CD 관리 대상: PostgreSQL / Redis / Service / StatefulSet / PVC
+Argo CD 관리 대상: PostgreSQL / Redis / MinIO / Service / StatefulSet / PVC
 GitHub Actions 자동 태그 변경 대상: 제외
 ```
 
@@ -304,6 +373,7 @@ kubectl get pvc
 ```text
 skipa-postgres-0   1/1   Running
 skipa-redis-0      1/1   Running
+skipa-minio-0      1/1   Running
 ```
 
 PVC 예시:
@@ -311,6 +381,52 @@ PVC 예시:
 ```text
 postgres-data-skipa-postgres-0   Bound   2Gi
 redis-data-skipa-redis-0         Bound   1Gi
+minio-data-skipa-minio-0         Bound   2Gi
+```
+
+## Queue 관리 방식
+
+Queue도 Argo CD로 관리합니다.
+RabbitMQ는 백엔드와 AI Worker 사이의 비동기 작업 메시지를 전달하는 컴포넌트이므로, datastore와 분리된 `k8s/queue` 디렉토리에서 관리합니다.
+
+```text
+Argo CD 관리 대상: RabbitMQ / Service / StatefulSet / PVC
+GitHub Actions 자동 태그 변경 대상: 제외
+```
+
+Queue Application은 self-heal은 활성화하지만, prune은 비활성화합니다.
+
+```yaml
+syncPolicy:
+  automated:
+    prune: false
+    selfHeal: true
+```
+
+RabbitMQ 상태 확인:
+
+```bash
+kubectl get pods
+kubectl get svc
+kubectl get pvc
+```
+
+정상 실행 예시:
+
+```text
+skipa-rabbitmq-0   1/1   Running
+```
+
+RabbitMQ Management UI는 외부에 직접 공개하지 않고, 필요할 때 `port-forward`로 확인합니다.
+
+```bash
+kubectl port-forward svc/skipa-rabbitmq 15672:15672
+```
+
+로컬 확인 주소:
+
+```text
+http://127.0.0.1:15672
 ```
 
 ## Flyway 마이그레이션
@@ -319,7 +435,7 @@ DB schema migration은 backend 애플리케이션의 Flyway가 담당합니다.
 
 ```text
 team8-skipa-datastore
-→ PostgreSQL / Redis 실행
+→ PostgreSQL / Redis / MinIO 실행
 
 team8-skipa-backend
 → Spring Boot 실행
@@ -473,6 +589,15 @@ REDIS_HOST=skipa-redis
 REDIS_PORT=6379
 REDIS_PASSWORD=<Redis Secret password>
 
+RABBITMQ_HOST=skipa-rabbitmq
+RABBITMQ_PORT=5672
+RABBITMQ_USERNAME=skipa
+RABBITMQ_PASSWORD=<RabbitMQ Secret password>
+
+MINIO_ENDPOINT=http://skipa-minio:9000
+MINIO_ACCESS_KEY=skipa
+MINIO_SECRET_KEY=<MinIO Secret root-password>
+
 JWT_SECRET=<Backend JWT Secret>
 ```
 
@@ -505,13 +630,23 @@ kubectl port-forward svc/skipa-redis 16379:6379
 redis-cli -h 127.0.0.1 -p 16379 -a '<REDIS_PASSWORD>' PING
 ```
 
+RabbitMQ Management UI 확인:
+
+```bash
+kubectl port-forward svc/skipa-rabbitmq 15672:15672
+```
+
+```text
+http://127.0.0.1:15672
+```
+
 ## 주의사항
 
 - Secret 값은 GitHub에 커밋하지 않습니다.
 - `.env` 파일은 GitHub에 커밋하지 않습니다.
 - Harbor 비밀번호, JWT Secret은 코드에 직접 작성하지 않습니다.
-- PostgreSQL/Redis는 외부에 직접 공개하지 않고 `ClusterIP`로 유지합니다.
+- PostgreSQL/Redis/MinIO/RabbitMQ는 외부에 직접 공개하지 않고 `ClusterIP`로 유지합니다.
 - PVC를 삭제하면 연결된 실제 볼륨 데이터도 삭제될 수 있으므로 주의합니다.
 - `gp3` StorageClass의 ReclaimPolicy가 `Delete`이므로 PVC 삭제 시 데이터가 함께 삭제될 수 있습니다.
-- Datastore는 Argo CD로 관리하지만, 서비스 배포 자동화 대상에서는 제외합니다.
+- Datastore와 Queue는 Argo CD로 관리하지만, 서비스 배포 자동화 대상에서는 제외합니다.
 - frontend/backend/ai 배포 시에는 각 서비스의 `kustomization.yml` image tag만 변경합니다.
