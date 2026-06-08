@@ -59,3 +59,9 @@ data:
   MINIO_ENDPOINT: "http://skipa-minio:9000"
   MINIO_BUCKET: "skipa"
   MINIO_SECURE: "false"
+
+  VECTOR_STORE: "qdrant"
+  QDRANT_URL: "http://skipa-qdrant:6333"
+  QDRANT_HOST: "skipa-qdrant"
+  QDRANT_HTTP_PORT: "6333"
+  QDRANT_GRPC_PORT: "6334"

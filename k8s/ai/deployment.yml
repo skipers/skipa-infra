@@ -47,6 +47,12 @@ spec:
                   name: skipa-minio-secret
                   key: root-password
 
+            - name: QDRANT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: skipa-qdrant-secret
+                  key: api-key
+
           readinessProbe:
             tcpSocket:
               port: 8001

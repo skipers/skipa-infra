@@ -8,3 +8,5 @@ resources:
   - redis-statefulset.yml
   - minio-service.yml
   - minio-statefulset.yml
+  - qdrant-service.yml
+  - qdrant-statefulset.yml
