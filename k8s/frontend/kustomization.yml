@@ -9,4 +9,4 @@ resources:
 images:
 - name: amdp-registry.skala-ai.com/skala26a-ai2/skipa-frontend
   newName: amdp-registry.skala-ai.com/skala26a-ai2/skipa-frontend
-  newTag: dev-fcc0001
+  newTag: dev-58f86bf
