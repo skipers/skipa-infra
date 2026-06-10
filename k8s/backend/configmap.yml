@@ -16,9 +16,13 @@ data:
   RABBITMQ_HOST: "skipa-rabbitmq"
   RABBITMQ_PORT: "5672"
 
-  REPORT_EXCHANGE: "skipa.report.exchange"
+  RABBITMQ_EXCHANGE: "skipa.task.exchange"
+
   REPORT_GENERATE_QUEUE: "skipa.report.generate"
   REPORT_GENERATE_ROUTING_KEY: "report.generate"
+
+  PATENT_EXTRACT_QUEUE: "skipa.patent-extract"
+  PATENT_EXTRACT_ROUTING_KEY: "patent.extract"
 
   MINIO_ENDPOINT: "http://skipa-minio:9000"
   MINIO_REPORT_BUCKET: "skipa-reports"

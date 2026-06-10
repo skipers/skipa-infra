@@ -53,6 +53,24 @@ spec:
                   name: skipa-qdrant-secret
                   key: api-key
 
+            - name: RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: skipa-rabbitmq-secret
+                  key: username
+
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: skipa-rabbitmq-secret
+                  key: password
+          
+            - name: INTERNAL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: skipa-backend-secret
+                  key: INTERNAL_API_KEY
+
           readinessProbe:
             tcpSocket:
               port: 8001
