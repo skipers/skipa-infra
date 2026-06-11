@@ -16,7 +16,7 @@ data:
   RABBITMQ_HOST: "skipa-rabbitmq"
   RABBITMQ_PORT: "5672"
 
-  RABBITMQ_EXCHANGE: "skipa.task.exchange"
+  RABBITMQ_EXCHANGE: "skipa.exchange"
 
   REPORT_GENERATE_QUEUE: "skipa.report.generate"
   REPORT_GENERATE_ROUTING_KEY: "report.generate"
@@ -24,7 +24,13 @@ data:
   PATENT_EXTRACT_QUEUE: "skipa.patent-extract"
   PATENT_EXTRACT_ROUTING_KEY: "patent.extract"
 
+  PRE_EVALUATION_GENERATE_QUEUE: "skipa.pre-evaluation.generate"
+  PRE_EVALUATION_GENERATE_ROUTING_KEY: "pre-evaluation.generate"
+
+  AI_SERVER_BASE_URL: "http://{ai-server-service-name}:{port}"
+  AI_PRE_EVALUATION_CHAT_PATH: "/pre-evaluations/chat"
+
   MINIO_ENDPOINT: "http://skipa-minio:9000"
-  MINIO_REPORT_BUCKET: "skipa-reports"
+  MINIO_BUCKET: "skipa-reports"
   MINIO_REGION: "us-east-1"
   MINIO_PRESIGNED_URL_EXPIRY_SECONDS: "600"
