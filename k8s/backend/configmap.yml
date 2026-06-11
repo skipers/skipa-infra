@@ -28,9 +28,11 @@ data:
   PRE_EVALUATION_GENERATE_ROUTING_KEY: "pre-evaluation.generate"
 
   AI_SERVER_BASE_URL: "http://{ai-server-service-name}:{port}"
+  AI_REPORT_CHAT_PATH: "/reports/chat"
   AI_PRE_EVALUATION_CHAT_PATH: "/pre-evaluations/chat"
 
   MINIO_ENDPOINT: "http://skipa-minio:9000"
-  MINIO_BUCKET: "skipa-reports"
+  MINIO_PUBLIC_ENDPOINT: "https://minio-team8-skipa.skala25a.project.skala-ai.com"
+  MINIO_BUCKET: "skipa"
   MINIO_REGION: "us-east-1"
   MINIO_PRESIGNED_URL_EXPIRY_SECONDS: "600"
