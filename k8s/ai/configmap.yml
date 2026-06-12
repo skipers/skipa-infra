@@ -73,4 +73,5 @@ data:
   RABBITMQ_PORT: "5672"
   REPORT_GENERATE_QUEUE: "skipa.report.generate"
   PATENT_EXTRACT_QUEUE: "skipa.patent-extract"
+  PRE_EVALUATION_GENERATE_QUEUE: "skipa.pre-evaluation.generate"
   BACKEND_INTERNAL_BASE_URL: "http://skipa-backend:8080"

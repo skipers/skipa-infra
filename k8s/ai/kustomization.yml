@@ -3,6 +3,9 @@ kind: Kustomization
 
 resources:
 - deployment.yml
+- report-worker-deployment.yml
+- patent-extract-worker-deployment.yml
+- pre-evaluation-worker-deployment.yml
 - service.yml
 - ingress.yml
 - configmap.yml

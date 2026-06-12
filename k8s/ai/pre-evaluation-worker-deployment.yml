@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skipa-ai-pre-evaluation-worker
+  namespace: skala3-finalproj-class2-team8
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: skipa-ai-pre-evaluation-worker
+  template:
+    metadata:
+      labels:
+        app: skipa-ai-pre-evaluation-worker
+    spec:
+      imagePullSecrets:
+        - name: harbor-registry-secret
+      containers:
+        - name: skipa-ai-pre-evaluation-worker
+          image: amdp-registry.skala-ai.com/skala26a-ai2/skipa-ai:dev-latest
+          imagePullPolicy: Always
+
+          envFrom:
+            - configMapRef:
+                name: skipa-ai-config
+            - secretRef:
+                name: skipa-ai-secret
+
+          env:
+            - name: APP_SERVICE
+              value: pre-evaluation-worker
+
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: skipa-minio-secret
+                  key: root-user
+
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: skipa-minio-secret
+                  key: root-password
+
+            - name: QDRANT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: skipa-qdrant-secret
+                  key: api-key
+
+            - name: RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: skipa-rabbitmq-secret
+                  key: username
+
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: skipa-rabbitmq-secret
+                  key: password
+
+            - name: INTERNAL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: skipa-backend-secret
+                  key: INTERNAL_API_KEY
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
