@@ -24,6 +24,8 @@ spec:
         - name: skipa-ai-patent-extract-worker
           image: amdp-registry.skala-ai.com/skala26a-ai2/skipa-ai:dev-latest
           imagePullPolicy: Always
+          args:
+            - patent-extract-worker
 
           envFrom:
             - configMapRef:
