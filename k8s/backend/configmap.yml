@@ -27,7 +27,7 @@ data:
   PRE_EVALUATION_GENERATE_QUEUE: "skipa.pre-evaluation.generate"
   PRE_EVALUATION_GENERATE_ROUTING_KEY: "pre-evaluation.generate"
 
-  AI_SERVER_BASE_URL: "http://skipa-ai:8000"
+  AI_SERVER_BASE_URL: "http://skipa-ai:8001"
   AI_REPORT_CHAT_PATH: "/api/v1/patents/{patent_id}/chat"
   AI_PRE_EVALUATION_CHAT_PATH: "/api/v1/pre-eval/cases/{case_id}/chat"
   AI_PORTFOLIO_INSIGHTS_PATH: "/portfolio/insights"
