@@ -10,4 +10,4 @@ resources:
 images:
 - name: amdp-registry.skala-ai.com/skala26a-ai2/skipa-ai
   newName: amdp-registry.skala-ai.com/skala26a-ai2/skipa-ai
-  newTag: dev-0e0c07b
+  newTag: dev-ae4079d
