@@ -4,6 +4,9 @@ metadata:
   name: skipa-ai-config
   namespace: skala3-finalproj-class2-team8
 data:
+  APP_SERVICE: "api"
+  PORT: "8000"
+
   DATA_ROOT: "/app/chatbot/data"
   PATENTS_ROOT: "/app/chatbot/data/mapped_patent_reports"
   PUBLIC_FILE_BASE_URL: "https://ai-team8-skipa.skala25a.project.skala-ai.com/files"

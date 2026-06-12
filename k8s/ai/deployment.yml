@@ -25,7 +25,7 @@ spec:
           image: amdp-registry.skala-ai.com/skala26a-ai2/skipa-ai:dev-latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 8001
+            - containerPort: 8000
               name: http
 
           envFrom:
@@ -73,13 +73,13 @@ spec:
 
           readinessProbe:
             tcpSocket:
-              port: 8001
+              port: 8000
             initialDelaySeconds: 30
             periodSeconds: 10
 
           livenessProbe:
             tcpSocket:
-              port: 8001
+              port: 8000
             initialDelaySeconds: 60
             periodSeconds: 20
 
