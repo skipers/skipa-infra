@@ -4,7 +4,7 @@ metadata:
   name: skipa-ai-pre-evaluation-worker
   namespace: skala3-finalproj-class2-team8
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
