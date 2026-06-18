@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - llm-model-cache-pvc.yml
+  - embedding-model-cache-pvc.yml
+  - llm-deployment.yml
+  - llm-service.yml
+  - embedding-deployment.yml
+  - embedding-service.yml
+
+images:
+  - name: amdp-registry.skala-ai.com/skala26a-ai2/skipa-model-serving
+    newName: amdp-registry.skala-ai.com/skala26a-ai2/skipa-model-serving
+    newTag: dev-f27af3c

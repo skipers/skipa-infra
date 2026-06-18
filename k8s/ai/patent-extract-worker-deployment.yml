@@ -30,6 +30,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: skipa-ai-config
+            - configMapRef:
+                name: ai-mode-openai
             - secretRef:
                 name: skipa-ai-secret
 

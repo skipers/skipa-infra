@@ -9,6 +9,8 @@ resources:
 - service.yml
 - ingress.yml
 - configmap.yml
+- ai-mode-openai-configmap.yml
+- ai-mode-opensource-configmap.yml
 
 images:
 - name: amdp-registry.skala-ai.com/skala26a-ai2/skipa-ai

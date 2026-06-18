@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-mode-openai
+  namespace: skala3-finalproj-class2-team8
+data:
+  AI_MODE: "openai"
+  AI_PROVIDER: "openai"
+  INTENT_PROVIDER: "openai"
+  ANSWER_PROVIDER: "openai"
+  EMBEDDING_PROVIDER: "openai"
+  OPENAI_MODEL: "gpt-4.1-mini"
+  OPENAI_REPORT_MODEL: "gpt-4.1"
+  OPENAI_EMBEDDING_MODEL: "text-embedding-3-large"
+  EMBEDDING_MODEL: "text-embedding-3-large"
+  QDRANT_COLLECTION_PREFIX: "skipa"
+  QDRANT_VECTOR_SIZE: "3072"
+  BUSINESS_RAG_INDEX_PREFIX: "skipa_"

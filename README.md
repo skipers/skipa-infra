@@ -17,6 +17,7 @@ skipa-infra/
 │       ├── backend-application.yml
 │       ├── ai-application.yml
 │       ├── frontend-application.yml
+│       ├── model-serving-application.yml
 │       └── monitoring-application.yml
 └── k8s/
     ├── datastore/
@@ -43,6 +44,8 @@ skipa-infra/
     ├── ai/
     │   ├── kustomization.yml
     │   ├── configmap.yml
+    │   ├── ai-mode-openai-configmap.yml
+    │   ├── ai-mode-opensource-configmap.yml
     │   ├── deployment.yml
     │   ├── report-worker-deployment.yml
     │   ├── patent-extract-worker-deployment.yml
@@ -54,6 +57,14 @@ skipa-infra/
     │   ├── deployment.yml
     │   ├── service.yml
     │   └── ingress.yml
+    ├── model-serving/
+    │   ├── kustomization.yml
+    │   ├── llm-model-cache-pvc.yml
+    │   ├── llm-deployment.yml
+    │   ├── llm-service.yml
+    │   ├── embedding-model-cache-pvc.yml
+    │   ├── embedding-deployment.yml
+    │   └── embedding-service.yml
     └── monitoring/
         ├── kustomization.yml
         ├── prometheus-rbac.yml
@@ -95,6 +106,7 @@ team8-skipa (root Application)
 ├── team8-skipa-datastore  # PostgreSQL / Redis / MinIO / Qdrant
 ├── team8-skipa-queue      # RabbitMQ
 ├── team8-skipa-backend    # Spring Boot backend
+├── team8-skipa-model-serving # internal LLM / embedding servers
 ├── team8-skipa-ai         # FastAPI AI API + workers
 ├── team8-skipa-frontend   # frontend
 └── team8-skipa-monitoring # Prometheus / Grafana
@@ -106,6 +118,7 @@ root Application은 `argocd/apps/` 디렉토리를 바라보고, 하위 Applicat
 team8-skipa-datastore  -> k8s/datastore
 team8-skipa-queue      -> k8s/queue
 team8-skipa-backend    -> k8s/backend
+team8-skipa-model-serving -> k8s/model-serving
 team8-skipa-ai         -> k8s/ai
 team8-skipa-frontend   -> k8s/frontend
 team8-skipa-monitoring -> k8s/monitoring
@@ -117,14 +130,15 @@ team8-skipa-monitoring -> k8s/monitoring
 
 ```text
 wave 0: datastore, queue
-wave 1: backend, ai
-wave 2: frontend
-wave 3: monitoring
+wave 1: model-serving
+wave 2: backend, ai
+wave 3: frontend
+wave 4: monitoring
 ```
 
-Datastore와 Queue가 먼저 생성되고, 이후 backend/AI 서버, frontend, monitoring이 동기화되는 흐름입니다.
+Datastore와 Queue가 먼저 생성되고, 이후 model-serving, backend/AI 서버, frontend, monitoring이 동기화되는 흐름입니다.
 
-Datastore와 Queue는 상태 저장 리소스를 포함하므로 `prune: false`, `selfHeal: true`로 관리합니다. Backend, AI, Frontend, Monitoring은 `prune: true`, `selfHeal: true`로 관리합니다.
+Datastore와 Queue는 상태 저장 리소스를 포함하므로 `prune: false`, `selfHeal: true`로 관리합니다. Model Serving, Backend, AI, Frontend, Monitoring은 `prune: true`, `selfHeal: true`로 관리합니다.
 
 ## 외부 엔드포인트
 
@@ -138,7 +152,7 @@ MinIO:    https://minio-team8-skipa.skala25a.project.skala-ai.com
 Grafana:  https://grafana-team8-skipa.skala25a.project.skala-ai.com
 ```
 
-MinIO ingress는 API port `9000`으로 연결됩니다. Console port `9001`은 ingress로 공개하지 않습니다.
+MinIO ingress는 API port `9000`으로 연결됩니다. Console port `9001`은 ingress로 공개하지 않습니다. Model Serving은 외부에 공개하지 않고 클러스터 내부 Service로만 접근합니다.
 
 ## 리소스 구성
 
@@ -173,6 +187,7 @@ AI API:     http://skipa-ai:8000
 ### AI
 
 - ConfigMap: `skipa-ai-config`
+- Mode ConfigMap: `ai-mode-openai` / `ai-mode-opensource`
 - API Deployment: `skipa-ai`
 - Worker Deployments:
   - `skipa-ai-report-worker`
@@ -200,6 +215,37 @@ Qdrant gRPC: skipa-qdrant:6334
 RabbitMQ:    skipa-rabbitmq:5672
 Backend API: http://skipa-backend:8080/api/v1
 ```
+
+기본 배포 모드는 `ai-mode-openai`입니다. 내부 LLM/Embedding 서버를 사용할 때는 AI Deployment들의 mode ConfigMap 참조를 `ai-mode-opensource`로 변경합니다.
+
+### Model Serving
+
+- LLM Deployment: `skipa-llm`
+- LLM Service: `skipa-llm`
+- LLM Port: `8000`
+- LLM Model: `Qwen/Qwen2.5-1.5B-Instruct`
+- LLM Cache PVC: `skipa-llm-model-cache`
+- LLM Cache Mount: `/models/huggingface`
+- LLM StorageClass: `gp3`
+- LLM Storage: `20Gi`
+- Embedding Deployment: `skipa-embedding`
+- Embedding Service: `skipa-embedding`
+- Embedding Port: `8001`
+- Embedding Model: `Qwen/Qwen3-Embedding-4B`
+- Embedding Cache PVC: `skipa-embedding-model-cache`
+- Embedding Cache Mount: `/models/huggingface`
+- Embedding StorageClass: `gp3`
+- Embedding Storage: `30Gi`
+- Image: `amdp-registry.skala-ai.com/skala26a-ai2/skipa-model-serving:<tag>`
+
+클러스터 내부 접속 주소:
+
+```text
+LLM:       http://skipa-llm:8000/v1
+Embedding: http://skipa-embedding:8001/v1
+```
+
+Model Serving은 GPU 없이 CPU 리소스로 먼저 실행합니다.
 
 ### PostgreSQL
 
@@ -306,6 +352,8 @@ RabbitMQ: skipa-rabbitmq:5672
 Backend: skipa-backend:8080
 AI: skipa-ai:8000
 Frontend: skipa-frontend:80
+LLM: skipa-llm:8000
+Embedding: skipa-embedding:8001
 Prometheus: skipa-prometheus:9090
 Grafana: skipa-grafana:3000
 ```
@@ -330,7 +378,7 @@ skipa-rabbitmq-0
 
 Backend, Frontend, AI API, AI worker처럼 상태를 직접 저장하지 않는 애플리케이션은 Deployment로 실행합니다. 새 이미지 배포 시 RollingUpdate를 통해 기존 Pod를 유지하면서 새 Pod로 교체합니다.
 
-Prometheus와 Grafana도 Deployment로 실행하지만, 수집 데이터와 Grafana 설정을 유지하기 위해 PVC를 사용합니다.
+Model Serving, Prometheus, Grafana도 Deployment로 실행합니다. Model Serving은 Hugging Face model cache를 유지하기 위해 PVC를 사용하고, Prometheus/Grafana는 수집 데이터와 Grafana 설정을 유지하기 위해 PVC를 사용합니다.
 
 ## Secret 생성
 
@@ -516,6 +564,7 @@ images:
 skipa-backend:dev-<short-sha>
 skipa-frontend:dev-<short-sha>
 skipa-ai:dev-<short-sha>
+skipa-model-serving:dev-<short-sha>
 ```
 
 서비스 레포의 GitHub Actions는 다음 두 태그를 함께 push할 수 있습니다.
@@ -546,12 +595,15 @@ skipa-backend main merge
 Frontend, AI도 동일한 방식으로 각각 자기 디렉토리의 `kustomization.yml`만 수정합니다.
 
 ```text
-skipa-frontend -> k8s/frontend/kustomization.yml
-skipa-backend  -> k8s/backend/kustomization.yml
-skipa-ai       -> k8s/ai/kustomization.yml
+skipa-frontend      -> k8s/frontend/kustomization.yml
+skipa-backend       -> k8s/backend/kustomization.yml
+skipa-ai            -> k8s/ai/kustomization.yml
+skipa-model-serving -> k8s/model-serving/kustomization.yml
 ```
 
-Datastore와 Queue는 서비스 배포 자동화 대상에서 제외합니다.
+Datastore와 Queue는 서비스 배포 자동화 대상에서 제외합니다. Model Serving 이미지는 AI 레포의 별도 GitHub Actions에서 빌드하고 Harbor에 push한 뒤, `k8s/model-serving/kustomization.yml`의 image tag를 업데이트합니다.
+
+초기 Model Serving 배포는 Harbor에 생성된 `skipa-model-serving:dev-f27af3c` 태그를 사용합니다. 이후 고유 태그 자동 업데이트가 필요하면 AI 레포의 model-serving 배포 workflow에서 infra repo의 `k8s/model-serving/kustomization.yml`을 함께 갱신하도록 확장합니다.
 
 ## GitHub Secrets
 
@@ -613,7 +665,7 @@ MINIO_SECRET_KEY
 
 ### AI ConfigMap
 
-주요 설정:
+공통 설정:
 
 ```text
 APP_SERVICE=api
@@ -631,6 +683,43 @@ RABBITMQ_HOST=skipa-rabbitmq
 RABBITMQ_PORT=5672
 BACKEND_INTERNAL_BASE_URL=http://skipa-backend:8080/api/v1
 ```
+
+기본 OpenAI mode 설정:
+
+```text
+AI_MODE=openai
+AI_PROVIDER=openai
+INTENT_PROVIDER=openai
+ANSWER_PROVIDER=openai
+EMBEDDING_PROVIDER=openai
+OPENAI_MODEL=gpt-4.1-mini
+OPENAI_REPORT_MODEL=gpt-4.1
+OPENAI_EMBEDDING_MODEL=text-embedding-3-large
+QDRANT_COLLECTION_PREFIX=skipa
+QDRANT_VECTOR_SIZE=3072
+BUSINESS_RAG_INDEX_PREFIX=skipa_
+```
+
+Open source mode 설정:
+
+```text
+AI_MODE=opensource
+AI_PROVIDER=opensource
+INTENT_PROVIDER=opensource
+ANSWER_PROVIDER=opensource
+EMBEDDING_PROVIDER=opensource
+OPEN_SOURCE_LLM_BASE_URL=http://skipa-llm:8000/v1
+OPEN_SOURCE_EMBEDDING_BASE_URL=http://skipa-embedding:8001/v1
+OPEN_SOURCE_LLM_MODEL=Qwen/Qwen2.5-1.5B-Instruct
+OPEN_SOURCE_EMBEDDING_MODEL=Qwen/Qwen3-Embedding-4B
+LLM_REQUEST_JSON_RESPONSE_FORMAT=true
+EMBEDDING_REQUEST_DIMENSIONS=false
+QDRANT_COLLECTION_PREFIX=opensource
+QDRANT_VECTOR_SIZE=2560
+BUSINESS_RAG_INDEX_PREFIX=opensource_
+```
+
+현재 AI API와 worker는 기본값으로 `ai-mode-openai` ConfigMap을 참조합니다. Open source mode로 전환할 때는 `kubectl set env`로 클러스터를 직접 수정하지 않고, Git에서 AI Deployment들의 `envFrom.configMapRef.name`을 `ai-mode-opensource`로 바꾼 뒤 Argo CD로 동기화합니다.
 
 AI Secret과 다른 Secret에서 주입되는 값:
 
@@ -665,6 +754,8 @@ skipa-ai-...                        1/1   Running
 skipa-ai-report-worker-...          1/1   Running
 skipa-ai-patent-extract-worker-...  1/1   Running
 skipa-ai-pre-evaluation-worker-...  1/1   Running
+skipa-llm-...                       1/1   Running
+skipa-embedding-...                 1/1   Running
 skipa-frontend-...                  1/1   Running
 skipa-prometheus-...                1/1   Running
 skipa-grafana-...                   1/1   Running
@@ -678,6 +769,8 @@ redis-data-skipa-redis-0         Bound   1Gi
 minio-data-skipa-minio-0         Bound   2Gi
 qdrant-data-skipa-qdrant-0       Bound   2Gi
 rabbitmq-data-skipa-rabbitmq-0   Bound   1Gi
+skipa-llm-model-cache            Bound   20Gi
+skipa-embedding-model-cache      Bound   30Gi
 skipa-prometheus-data            Bound   5Gi
 skipa-grafana-data               Bound   2Gi
 ```
@@ -757,6 +850,35 @@ kubectl port-forward -n skala3-finalproj-class2-team8 svc/skipa-minio 19001:9001
 
 ```text
 http://127.0.0.1:19001
+```
+
+### Model Serving
+
+LLM 서버:
+
+```bash
+kubectl port-forward -n skala3-finalproj-class2-team8 svc/skipa-llm 18000:8000
+```
+
+```text
+http://127.0.0.1:18000/v1
+```
+
+Embedding 서버:
+
+```bash
+kubectl port-forward -n skala3-finalproj-class2-team8 svc/skipa-embedding 18001:8001
+```
+
+```text
+http://127.0.0.1:18001/v1
+```
+
+로컬 AI 서버에서 내부 모델 서버를 테스트할 때는 아래 값을 사용합니다.
+
+```text
+OPEN_SOURCE_LLM_BASE_URL=http://127.0.0.1:18000/v1
+OPEN_SOURCE_EMBEDDING_BASE_URL=http://127.0.0.1:18001/v1
 ```
 
 ### Prometheus
