@@ -31,7 +31,7 @@ spec:
             - configMapRef:
                 name: skipa-ai-config
             - configMapRef:
-                name: ai-mode-openai
+                name: ai-mode-opensource
             - secretRef:
                 name: skipa-ai-secret
 
