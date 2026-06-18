@@ -12,4 +12,4 @@ resources:
 images:
   - name: amdp-registry.skala-ai.com/skala26a-ai2/skipa-model-serving
     newName: amdp-registry.skala-ai.com/skala26a-ai2/skipa-model-serving
-    newTag: dev-f27af3c
+    newTag: dev-8f2bf09
