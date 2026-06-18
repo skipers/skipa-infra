@@ -16,7 +16,8 @@ skipa-infra/
 │       ├── queue-application.yml
 │       ├── backend-application.yml
 │       ├── ai-application.yml
-│       └── frontend-application.yml
+│       ├── frontend-application.yml
+│       └── monitoring-application.yml
 └── k8s/
     ├── datastore/
     │   ├── kustomization.yml
@@ -48,11 +49,25 @@ skipa-infra/
     │   ├── pre-evaluation-worker-deployment.yml
     │   ├── service.yml
     │   └── ingress.yml
-    └── frontend/
+    ├── frontend/
+    │   ├── kustomization.yml
+    │   ├── deployment.yml
+    │   ├── service.yml
+    │   └── ingress.yml
+    └── monitoring/
         ├── kustomization.yml
-        ├── deployment.yml
-        ├── service.yml
-        └── ingress.yml
+        ├── prometheus-rbac.yml
+        ├── prometheus-configmap.yml
+        ├── prometheus-pvc.yml
+        ├── prometheus-deployment.yml
+        ├── prometheus-service.yml
+        ├── grafana-datasource-configmap.yml
+        ├── grafana-dashboard-provider-configmap.yml
+        ├── grafana-dashboard-configmap.yml
+        ├── grafana-pvc.yml
+        ├── grafana-deployment.yml
+        ├── grafana-service.yml
+        └── grafana-ingress.yml
 ```
 
 ## Namespace
@@ -81,7 +96,8 @@ team8-skipa (root Application)
 ├── team8-skipa-queue      # RabbitMQ
 ├── team8-skipa-backend    # Spring Boot backend
 ├── team8-skipa-ai         # FastAPI AI API + workers
-└── team8-skipa-frontend   # frontend
+├── team8-skipa-frontend   # frontend
+└── team8-skipa-monitoring # Prometheus / Grafana
 ```
 
 root Application은 `argocd/apps/` 디렉토리를 바라보고, 하위 Application들을 생성 및 관리합니다. 각 하위 Application은 자기 서비스의 `k8s/{service}` 디렉토리를 바라봅니다.
@@ -92,6 +108,7 @@ team8-skipa-queue      -> k8s/queue
 team8-skipa-backend    -> k8s/backend
 team8-skipa-ai         -> k8s/ai
 team8-skipa-frontend   -> k8s/frontend
+team8-skipa-monitoring -> k8s/monitoring
 ```
 
 ## Sync 순서
@@ -102,11 +119,12 @@ team8-skipa-frontend   -> k8s/frontend
 wave 0: datastore, queue
 wave 1: backend, ai
 wave 2: frontend
+wave 3: monitoring
 ```
 
-Datastore와 Queue가 먼저 생성되고, 이후 backend/AI 서버와 frontend가 동기화되는 흐름입니다.
+Datastore와 Queue가 먼저 생성되고, 이후 backend/AI 서버, frontend, monitoring이 동기화되는 흐름입니다.
 
-Datastore와 Queue는 상태 저장 리소스를 포함하므로 `prune: false`, `selfHeal: true`로 관리합니다. Backend, AI, Frontend는 `prune: true`, `selfHeal: true`로 관리합니다.
+Datastore와 Queue는 상태 저장 리소스를 포함하므로 `prune: false`, `selfHeal: true`로 관리합니다. Backend, AI, Frontend, Monitoring은 `prune: true`, `selfHeal: true`로 관리합니다.
 
 ## 외부 엔드포인트
 
@@ -117,6 +135,7 @@ Frontend: https://team8-skipa.skala25a.project.skala-ai.com
 Backend:  https://api-team8-skipa.skala25a.project.skala-ai.com
 AI:       https://ai-team8-skipa.skala25a.project.skala-ai.com
 MinIO:    https://minio-team8-skipa.skala25a.project.skala-ai.com
+Grafana:  https://grafana-team8-skipa.skala25a.project.skala-ai.com
 ```
 
 MinIO ingress는 API port `9000`으로 연결됩니다. Console port `9001`은 ingress로 공개하지 않습니다.
@@ -241,6 +260,37 @@ Backend API: http://skipa-backend:8080/api/v1
 - StorageClass: `gp3`
 - Storage: `1Gi`
 
+### Monitoring
+
+- Prometheus:
+  - ServiceAccount: `skipa-prometheus`
+  - ClusterRole / ClusterRoleBinding: `skipa-prometheus`
+  - ConfigMap: `skipa-prometheus-config`
+  - Deployment: `skipa-prometheus`
+  - Service: `skipa-prometheus`
+  - PVC: `skipa-prometheus-data`
+  - Image: `prom/prometheus:v2.55.1`
+  - Port: `9090`
+  - StorageClass: `gp3`
+  - Storage: `5Gi`
+- Grafana:
+  - ConfigMap: `skipa-grafana-datasources`
+  - ConfigMap: `skipa-grafana-dashboard-providers`
+  - ConfigMap: `skipa-grafana-dashboards`
+  - Deployment: `skipa-grafana`
+  - Service: `skipa-grafana`
+  - Ingress: `skipa-grafana-ingress`
+  - Secret: `skipa-grafana-secret`
+  - PVC: `skipa-grafana-data`
+  - Image: `grafana/grafana:11.3.0`
+  - Port: `3000`
+  - StorageClass: `gp3`
+  - Storage: `2Gi`
+
+Prometheus는 Kubernetes API, node/cAdvisor metric, annotation이 붙은 Pod/Service metric을 수집합니다. Backend Service는 `/actuator/prometheus`, AI Service는 `/metrics`를 scrape 대상으로 등록합니다.
+
+Grafana는 Prometheus datasource와 `SKIPA Monitoring Overview` 기본 dashboard를 provisioning합니다.
+
 ## Kubernetes 리소스 역할
 
 ### Service
@@ -256,6 +306,8 @@ RabbitMQ: skipa-rabbitmq:5672
 Backend: skipa-backend:8080
 AI: skipa-ai:8000
 Frontend: skipa-frontend:80
+Prometheus: skipa-prometheus:9090
+Grafana: skipa-grafana:3000
 ```
 
 ### Headless Service
@@ -277,6 +329,8 @@ skipa-rabbitmq-0
 ### Deployment
 
 Backend, Frontend, AI API, AI worker처럼 상태를 직접 저장하지 않는 애플리케이션은 Deployment로 실행합니다. 새 이미지 배포 시 RollingUpdate를 통해 기존 Pod를 유지하면서 새 Pod로 교체합니다.
+
+Prometheus와 Grafana도 Deployment로 실행하지만, 수집 데이터와 Grafana 설정을 유지하기 위해 PVC를 사용합니다.
 
 ## Secret 생성
 
@@ -369,6 +423,19 @@ kubectl create secret generic skipa-ai-secret \
   --from-literal=TAVILY_API_KEY="<TAVILY_API_KEY>"
 ```
 
+### Grafana Secret
+
+Grafana 관리자 계정 정보입니다.
+
+```bash
+GRAFANA_ADMIN_PASSWORD=$(openssl rand -hex 16)
+
+kubectl create secret generic skipa-grafana-secret \
+  -n "$NAMESPACE" \
+  --from-literal=admin-user="admin" \
+  --from-literal=admin-password="$GRAFANA_ADMIN_PASSWORD"
+```
+
 ### Harbor Image Pull Secret
 
 Harbor private registry에서 이미지를 pull하기 위한 Secret입니다.
@@ -393,6 +460,7 @@ skipa-redis-secret
 skipa-minio-secret
 skipa-qdrant-secret
 skipa-rabbitmq-secret
+skipa-grafana-secret
 ```
 
 Secret 생성 확인:
@@ -598,6 +666,8 @@ skipa-ai-report-worker-...          1/1   Running
 skipa-ai-patent-extract-worker-...  1/1   Running
 skipa-ai-pre-evaluation-worker-...  1/1   Running
 skipa-frontend-...                  1/1   Running
+skipa-prometheus-...                1/1   Running
+skipa-grafana-...                   1/1   Running
 ```
 
 PVC 예시:
@@ -608,6 +678,8 @@ redis-data-skipa-redis-0         Bound   1Gi
 minio-data-skipa-minio-0         Bound   2Gi
 qdrant-data-skipa-qdrant-0       Bound   2Gi
 rabbitmq-data-skipa-rabbitmq-0   Bound   1Gi
+skipa-prometheus-data            Bound   5Gi
+skipa-grafana-data               Bound   2Gi
 ```
 
 ## 로컬 확인
@@ -685,6 +757,34 @@ kubectl port-forward -n skala3-finalproj-class2-team8 svc/skipa-minio 19001:9001
 
 ```text
 http://127.0.0.1:19001
+```
+
+### Prometheus
+
+```bash
+kubectl port-forward -n skala3-finalproj-class2-team8 svc/skipa-prometheus 19090:9090
+```
+
+```text
+http://127.0.0.1:19090
+```
+
+### Grafana
+
+Grafana는 ingress로 접근할 수 있습니다.
+
+```text
+https://grafana-team8-skipa.skala25a.project.skala-ai.com
+```
+
+로컬에서 확인할 때는 `port-forward`를 사용할 수 있습니다.
+
+```bash
+kubectl port-forward -n skala3-finalproj-class2-team8 svc/skipa-grafana 13000:3000
+```
+
+```text
+http://127.0.0.1:13000
 ```
 
 ## Flyway 마이그레이션

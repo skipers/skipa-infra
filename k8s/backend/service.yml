@@ -3,6 +3,10 @@ kind: Service
 metadata:
   name: skipa-backend
   namespace: skala3-finalproj-class2-team8
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/actuator/prometheus"
+    prometheus.io/port: "8080"
 spec:
   type: ClusterIP
   selector:

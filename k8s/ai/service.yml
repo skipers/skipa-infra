@@ -3,6 +3,10 @@ kind: Service
 metadata:
   name: skipa-ai
   namespace: skala3-finalproj-class2-team8
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/metrics"
+    prometheus.io/port: "8000"
 spec:
   type: ClusterIP
   selector:

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: skipa-grafana-datasources
+  namespace: skala3-finalproj-class2-team8
+data:
+  prometheus.yml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        uid: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://skipa-prometheus:9090
+        isDefault: true
+        editable: false

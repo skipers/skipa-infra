@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: skipa-grafana-dashboard-providers
+  namespace: skala3-finalproj-class2-team8
+data:
+  dashboards.yml: |
+    apiVersion: 1
+    providers:
+      - name: skipa
+        orgId: 1
+        folder: SKIPA
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 30
+        allowUiUpdates: true
+        options:
+          path: /var/lib/grafana/dashboards/skipa
