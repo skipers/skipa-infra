@@ -5,6 +5,7 @@ metadata:
   namespace: skala3-finalproj-class2-team8
 data:
   SPRING_PROFILES_ACTIVE: "prod"
+  SPRING_MVC_ASYNC_REQUEST_TIMEOUT: "300000"
   LOCAL_SEED_PASSWORD: "1234"
 
   DB_HOST: "skipa-postgres"
