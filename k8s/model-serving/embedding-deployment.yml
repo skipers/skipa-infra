@@ -60,10 +60,10 @@ spec:
             periodSeconds: 20
           resources:
             requests:
-              cpu: "2"
-              memory: 6Gi
+              cpu: 500m
+              memory: 4Gi
             limits:
-              cpu: "4"
+              cpu: "2"
               memory: 8Gi
       volumes:
         - name: model-cache
