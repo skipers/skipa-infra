@@ -61,10 +61,10 @@ spec:
           resources:
             requests:
               cpu: 500m
-              memory: 4Gi
+              memory: 6Gi
             limits:
               cpu: "2"
-              memory: 8Gi
+              memory: 12Gi
       volumes:
         - name: model-cache
           persistentVolumeClaim:
