@@ -147,12 +147,11 @@ Ingress는 `public-nginx` class와 `letsencrypt-prod` ClusterIssuer를 사용합
 ```text
 Frontend: https://team8-skipa.skala25a.project.skala-ai.com
 Backend:  https://api-team8-skipa.skala25a.project.skala-ai.com
-AI:       https://ai-team8-skipa.skala25a.project.skala-ai.com
 MinIO:    https://minio-team8-skipa.skala25a.project.skala-ai.com
 Grafana:  https://grafana-team8-skipa.skala25a.project.skala-ai.com
 ```
 
-MinIO ingress는 API port `9000`으로 연결됩니다. Console port `9001`은 ingress로 공개하지 않습니다. Model Serving은 외부에 공개하지 않고 클러스터 내부 Service로만 접근합니다.
+MinIO ingress는 API port `9000`으로 연결됩니다. Console port `9001`은 ingress로 공개하지 않습니다. AI API와 Model Serving은 외부에 공개하지 않고 클러스터 내부 Service로만 접근합니다.
 
 ## 리소스 구성
 
@@ -194,11 +193,10 @@ AI API:     http://skipa-ai:8000
   - `skipa-ai-patent-extract-worker`
   - `skipa-ai-pre-evaluation-worker`
 - Service: `skipa-ai`
-- Ingress: `skipa-ai-ingress`
 - API Port: `8000`
 - Image: `amdp-registry.skala-ai.com/skala26a-ai2/skipa-ai:<tag>`
 
-AI API와 worker는 같은 이미지를 사용합니다. Worker는 container args와 `APP_SERVICE` 값으로 실행 모드를 구분합니다.
+AI API와 worker는 같은 이미지를 사용합니다. AI API는 외부 Ingress 없이 클러스터 내부 Service로만 접근하며, Worker는 container args와 `APP_SERVICE` 값으로 실행 모드를 구분합니다.
 
 ```text
 report-worker          -> skipa.report.generate
@@ -670,7 +668,7 @@ MINIO_SECRET_KEY
 ```text
 APP_SERVICE=api
 PORT=8000
-PUBLIC_FILE_BASE_URL=https://ai-team8-skipa.skala25a.project.skala-ai.com/files
+PUBLIC_FILE_BASE_URL=http://skipa-ai:8000/files
 INTENT_PROVIDER=openai
 ANSWER_PROVIDER=openai
 EMBEDDING_PROVIDER=openai

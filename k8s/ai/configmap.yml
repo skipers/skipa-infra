@@ -9,7 +9,7 @@ data:
 
   DATA_ROOT: "/app/chatbot/data"
   PATENTS_ROOT: "/app/chatbot/data/mapped_patent_reports"
-  PUBLIC_FILE_BASE_URL: "https://ai-team8-skipa.skala25a.project.skala-ai.com/files"
+  PUBLIC_FILE_BASE_URL: "http://skipa-ai:8000/files"
 
   INTENT_PROVIDER: "openai"
   ANSWER_PROVIDER: "openai"
@@ -72,6 +72,13 @@ data:
   RABBITMQ_HOST: "skipa-rabbitmq"
   RABBITMQ_PORT: "5672"
   REPORT_GENERATE_QUEUE: "skipa.report.generate"
+  REPORT_GENERATE_DLQ: "skipa.report.generate.dlq"
   PATENT_EXTRACT_QUEUE: "skipa.patent-extract"
+  PATENT_EXTRACT_DLQ: "skipa.patent-extract.dlq"
   PRE_EVALUATION_GENERATE_QUEUE: "skipa.pre-evaluation.generate"
+  PRE_EVALUATION_GENERATE_DLQ: "skipa.pre-evaluation.generate.dlq"
+  WORKER_MAX_ATTEMPTS: "3"
+  REPORT_WORKER_MAX_ATTEMPTS: "3"
+  PATENT_EXTRACT_WORKER_MAX_ATTEMPTS: "3"
+  PRE_EVALUATION_MAX_ATTEMPTS: "3"
   BACKEND_INTERNAL_BASE_URL: "http://skipa-backend:8080/api/v1"
